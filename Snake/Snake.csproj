@@ -92,9 +92,8 @@
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Assets\" />
-    <Folder Include="Assets\Controller\" />
     <Folder Include="SourceCodes\" />
-    <Folder Include="Assets\Background\" />
+    <Folder Include="Fonts\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Info.plist" />
@@ -105,17 +104,22 @@
     <Compile Include="AppDelegate.cs" />
     <Compile Include="SourceCodes\SnakeViewController.cs" />
     <Compile Include="SourceCodes\ControllerView.cs" />
-    <Compile Include="SourceCodes\Appearance.cs" />
+    <Compile Include="SourceCodes\SnakeAppearance.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <BundleResource Include="Assets\snake%402x.png" />
-    <BundleResource Include="Assets\target%402x.png" />
-    <BundleResource Include="Assets\Controller\bg%402x.png" />
-    <BundleResource Include="Assets\Controller\down%402x.png" />
-    <BundleResource Include="Assets\Controller\left%402x.png" />
-    <BundleResource Include="Assets\Controller\right%402x.png" />
-    <BundleResource Include="Assets\Controller\up%402x.png" />
-    <BundleResource Include="Assets\Background\bg%402x.png" />
+    <BundleResource Include="Fonts\Museo300-Regular.otf" />
+    <BundleResource Include="Assets\bg_controller%402x.png" />
+    <BundleResource Include="Assets\bg%402x.png" />
+    <BundleResource Include="Assets\start%402x.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ImageAsset Include="Resources\Images.xcassets\AppIcons.appiconset\Contents.json" />
+    <ImageAsset Include="Resources\Images.xcassets\AppIcons.appiconset\29.png" />
+    <ImageAsset Include="Resources\Images.xcassets\AppIcons.appiconset\152.png" />
+    <ImageAsset Include="Resources\Images.xcassets\AppIcons.appiconset\40.png" />
+    <ImageAsset Include="Resources\Images.xcassets\AppIcons.appiconset\58.png" />
+    <ImageAsset Include="Resources\Images.xcassets\AppIcons.appiconset\76.png" />
+    <ImageAsset Include="Resources\Images.xcassets\AppIcons.appiconset\80.png" />
   </ItemGroup>
 </Project>

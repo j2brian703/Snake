@@ -4,29 +4,39 @@ using System.Collections.Generic;
 
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
+using MonoTouch.ObjCRuntime;
 
 namespace Snake
 {
     public partial class SnakeViewController : UIViewController
     {
         private UIButton startButton;
+        private UIView border;
         private ControllerView controllerView;
-        private UIImageView target;
-        private UIImageView head;
-        private UILabel playClockLabel;
-        private List<UIImageView> tailList;
+        private UIView target;
+        private UIView head;
+        private List<UIView> tailList;
         private NSTimer gameTimer;
         private NSTimer playTimer;
         private Random rand;
-        private Int32 w_offset;
-        private Int32 h_offset;
         private Int32 clock = 0;
+        private DIRECTION direction;
 
-        private static Int32 GAME_SPEED = 200;
+        private static Int32 TAIL_SIZE = 20;
+        private static Int32 GAME_SPEED = 150;
         // Lower the faster
+
+        public enum DIRECTION
+        {
+            Up,
+            Down,
+            Left,
+            Right
+        }
 
         public SnakeViewController()
         {
+
         }
 
         public override void DidReceiveMemoryWarning()
@@ -44,16 +54,25 @@ namespace Snake
             base.ViewDidLoad();
 			
             // Perform any additional setup after loading the view, typically from a nib.
-            this.View.BackgroundColor = UIColor.FromPatternImage(UIImage.FromBundle("Assets/Background/bg.png"));
-
-            w_offset = 20;
-            h_offset = 0;
+            this.View.BackgroundColor = UIColor.FromPatternImage(UIImage.FromBundle("Assets/bg.png"));
         }
 
         public override void ViewWillAppear(bool animated)
         {
             base.ViewWillAppear(animated);
 
+            // controller
+            InitializeController();
+
+            // border
+            border = new UIView(new RectangleF(12, 20, 1000, 600));
+            border.Tag = 100;
+            border.BackgroundColor = UIColor.Clear;
+            border.Layer.BorderColor = UIColor.White.CGColor;
+            border.Layer.BorderWidth = 1f;
+            this.View.AddSubview(border);
+
+            // Initialize other controls
             InitializeControls();
         }
 
@@ -84,78 +103,78 @@ namespace Snake
         private void InitializeControls()
         {
             rand = new Random();
+            direction = DIRECTION.Right;
+            clock = 0;
 
-            if (playClockLabel == null)
-            {
-                playClockLabel = SnakeAppearance.GenerateLabel();
-                playClockLabel.Frame = new RectangleF(0, 20, this.View.Frame.Width, 40);
-                this.View.AddSubview(playClockLabel);
-            }
-            playClockLabel.Text = "00:00:00";
+            // Init startButton
+            UIImage startImg = UIImage.FromBundle("Assets/start.png");
+            startButton = SnakeAppearance.GenerateButton();
+            startButton.Frame = new RectangleF(this.View.Center.X - (startImg.Size.Width / 2), border.Center.Y - (startImg.Size.Height / 2), startImg.Size.Width, startImg.Size.Height);
+            startButton.SetImage(UIImage.FromBundle("Assets/start.png"), UIControlState.Normal);
+            startButton.TouchUpInside += HandleStartTouchUpInside;
+            this.View.AddSubview(startButton);
 
-            // controller
-            InitializeController();
-
-            // startButton
-            if (startButton == null)
-            {
-                startButton = SnakeAppearance.GenerateButton();
-                startButton.Frame = new RectangleF(this.View.Center.X - 150, this.View.Center.Y - 50, 300, 100);
-                startButton.BackgroundColor = UIColor.Gray;
-                startButton.TouchUpInside += HandleStartTouchUpInside;
-                this.View.AddSubview(startButton);
-            }
-            startButton.SetTitle("Start", UIControlState.Normal);
-
-            // tailList
+            // Init tailList
             if (tailList == null)
             {
-                tailList = new List<UIImageView>();
+                tailList = new List<UIView>();
             }
             else
             {
                 tailList.Clear();
             }
 
-            // head
+            // Init controllerView
+            controllerView.UpdateTailCount(0);
+            controllerView.UpdatePlayClock("00:00:00");
+            controllerView.UserInteractionEnabled = false;
+
+            // Init head
             InitializeHead();
 
-            // target
+            // Init target
             InitializeTarget();
         }
 
         private void InitializeController()
         {
-            controllerView = new ControllerView(new RectangleF(this.View.Center.X - 150, this.View.Frame.Bottom - 150, 300, 300));
+            controllerView = new ControllerView(new RectangleF(0, this.View.Frame.Bottom - 136, this.View.Frame.Width, 136));
+            controllerView.Tag = 100;
             controllerView.UpEvent += HandleUpEvent;
             controllerView.DownEvent += HandleDownEvent;
             controllerView.LeftEvent += HandleLeftEvent;
             controllerView.RightEvent += HandleRightEvent;
-            controllerView.UserInteractionEnabled = false;
             this.View.AddSubview(controllerView);
         }
 
         private void InitializeHead()
         {
-            if (head == null)
-            {
-                head = new UIImageView(UIImage.FromBundle("Assets/snake.png"));
-                head.Frame = new RectangleF(100, 250, 20, 20);
-                this.View.AddSubview(head);
-            }
+            head = new UIView(new RectangleF(0, 0, TAIL_SIZE, TAIL_SIZE));
+            head.BackgroundColor = SnakeAppearance.Color("ee5c65");
+            head.Layer.BorderColor = SnakeAppearance.Color("797272").CGColor;
+            head.Layer.BorderWidth = 1.0f;
+            this.View.AddSubview(head);
 
             PointF randomPoint = GenerateNewPoint(head);
             head.Frame = new RectangleF(randomPoint.X, randomPoint.Y, head.Frame.Width, head.Frame.Height);
+
+            tailList.Add(head);
         }
 
         private void InitializeTarget()
         {
-            if (target == null)
+            if (target != null)
             {
-                target = new UIImageView(UIImage.FromBundle("Assets/target.png"));
-                target.Frame = new RectangleF(0, 0, 20, 20);
-                this.View.AddSubview(target);
+                target.RemoveFromSuperview();
+                target.Dispose();
+                target = null;
             }
+
+            target = new UIView(new RectangleF(0, 0, TAIL_SIZE, TAIL_SIZE));
+            target.BackgroundColor = SnakeAppearance.Color("505050");
+            target.Layer.BorderColor = SnakeAppearance.Color("797272").CGColor;
+            target.Layer.BorderWidth = 1.0f;
+            this.View.AddSubview(target);
 
             PointF randomPoint = GenerateNewPoint(target);
             target.Frame = new RectangleF(randomPoint.X, randomPoint.Y, target.Frame.Width, target.Frame.Height);
@@ -163,6 +182,15 @@ namespace Snake
 
         private void GameOver()
         {
+            foreach (UIView subview in this.View)
+            {
+                if (subview.Tag != 100)
+                {
+                    subview.RemoveFromSuperview();
+                    subview.Dispose();
+                }
+            }
+
             // Reset controls
             InitializeControls();
 
@@ -181,26 +209,46 @@ namespace Snake
 
         void HandleUpEvent()
         {
-            w_offset = 0;
-            h_offset = -20;
+            // If tail count is more than 1, do not change to opposite direction
+            if (direction == DIRECTION.Down && tailList.Count > 1)
+            {
+                return;
+            }
+
+            direction = DIRECTION.Up;
         }
 
         void HandleDownEvent()
         {
-            w_offset = 0;
-            h_offset = 20;
+            // If tail count is more than 1, do not change to opposite direction
+            if (direction == DIRECTION.Up && tailList.Count > 1)
+            {
+                return;
+            }
+
+            direction = DIRECTION.Down;
         }
 
         void HandleLeftEvent()
         {
-            w_offset = -20;
-            h_offset = 0;
+            // If tail count is more than 1, do not change to opposite direction
+            if (direction == DIRECTION.Right && tailList.Count > 1)
+            {
+                return;
+            }
+
+            direction = DIRECTION.Left;
         }
 
         void HandleRightEvent()
         {
-            w_offset = 20;
-            h_offset = 0;
+            // If tail count is more than 1, do not change to opposite direction
+            if (direction == DIRECTION.Left && tailList.Count > 1)
+            {
+                return;
+            }
+
+            direction = DIRECTION.Right;
         }
 
         #endregion
@@ -209,14 +257,13 @@ namespace Snake
 
         private void MoveSnake()
         {
-            PointF orgin = head.Center;
-            head.Center = new PointF(orgin.X + w_offset, orgin.Y + h_offset);
-
+            // Make sure to update tail position from the last tail and update head position last otherwise, tails won't show
             for (Int32 i = tailList.Count - 1; i >= 0; i--)
             {
                 if (i == 0)
                 {
-                    tailList[i].Center = orgin;
+                    PointF newOffset = NewHeadOffset();
+                    head.Center = new PointF(head.Center.X + newOffset.X, head.Center.Y + newOffset.Y);
                 }
                 else
                 {
@@ -227,13 +274,22 @@ namespace Snake
             // Check if the snake touched the target
             if (head.Frame.IntersectsWith(target.Frame))
             {
+                // Place target in the random point
                 InitializeTarget();
 
+                // Add tail to snake
                 AddTail();
             }
-            // Check if the snake touched its body or went out of screen
-            else if (SnakeTouchedItself || OutOfBound(head.Frame))
+            // Check if the snake touched its body
+            else if (SnakeTouchedItself)
             {
+                GameOver();
+            }
+            else if (OutOfBound(head.Frame))
+            {
+                border.Layer.BorderColor = UIColor.Red.CGColor;
+                border.Layer.BorderWidth = 2f;
+
                 GameOver();
             }
         }
@@ -244,47 +300,38 @@ namespace Snake
             {
                 for (Int32 i = 0; i < tailList.Count; i++)
                 {
-                    if (tailList[i].PointInside(head.Center, null))
+                    if (tailList[i] != head)
                     {
-                        return true;
+                        if (tailList[i].Frame.IntersectsWith(head.Frame))
+                        {
+                            return true;
+                        }
                     }
                 }
 
                 return false;
             }
-//            CGPoint point = head.center;
-//            if ([tailArray count] > 3) {
-//                for (int i = 3; i < [tailArray count]; i++) {
-//                    UIImageView * tail = [tailArray objectAtIndex:i];
-//                    CGRect rect = CGRectMake(tail.frame.origin.x, tail.frame.origin.y, tail.frame.size.w_offset, tail.frame.size.h_offset);
-//                    if ([self isPointInRect:point rect:rect]) {
-//                        return YES;
-//                    }
-//                }
-//            }
-//
-//            return NO;
         }
 
         private bool OutOfBound(RectangleF frame)
         {
-            // Left edge
-            if (frame.X <= 0)
+            // Left border edge
+            if (frame.Left < border.Frame.Left)
             {
                 return true;
             }
-            // Right edge
-            else if (frame.X + frame.Width >= this.View.Frame.Width)
+            // Right border edge
+            else if (frame.Right > border.Frame.Right)
             {
                 return true;
             }
-            // Top edge
-            else if (frame.Y <= 20)
+            // Top border edge
+            else if (frame.Top < border.Frame.Top)
             {
                 return true;
             }
-            // Bottom controller edge
-            else if (frame.Y + frame.Height >= controllerView.Frame.Y)
+            // Bottom border edge
+            else if (frame.Bottom > border.Frame.Bottom)
             {
                 return true;
             }
@@ -296,16 +343,19 @@ namespace Snake
 
         #region Others
 
-        private PointF GenerateNewPoint(UIImageView imageView)
+        private PointF GenerateNewPoint(UIView view)
         {
-            Int32 x = rand.Next(0, (Int32)this.View.Frame.Width);
-            Int32 y = rand.Next(64, (Int32)(controllerView.Frame.Y));
-            PointF randomPoint = new PointF(x, y);
+            // New point must be divisible by TAIL_SIZE since the target has to be intersect with th snake at exact point
+            Int32 x = rand.Next(1, (Int32)(controllerView.Frame.Width / TAIL_SIZE) - 2);
+            Int32 y = rand.Next(1, (Int32)((controllerView.Frame.Y - 20) / TAIL_SIZE - 2));
 
-            RectangleF tempHeadFrame = new RectangleF(randomPoint.X, randomPoint.Y, imageView.Frame.Width, imageView.Frame.Height);
+            // Set 12
+            PointF randomPoint = new PointF(12 + x * TAIL_SIZE, y * TAIL_SIZE);
+
+            RectangleF tempHeadFrame = new RectangleF(randomPoint.X, randomPoint.Y, view.Frame.Width, view.Frame.Height);
             if (tempHeadFrame.IntersectsWith(startButton.Frame) || OutOfBound(tempHeadFrame))
             {
-                return GenerateNewPoint(imageView);
+                return GenerateNewPoint(view);
             }
 
             return randomPoint;
@@ -313,20 +363,50 @@ namespace Snake
 
         private void AddTail()
         {
-            UIImageView tail = new UIImageView(UIImage.FromBundle("Assets/snake.png"));
-            if (tailList.Count == 0)
-            {
-                tail.Frame = new RectangleF(head.Frame.X - 20, head.Frame.Y, 20, 20);
-            }
-            else
-            {
-                UIImageView lastTail = tailList[tailList.Count - 1];
-                tail.Center = lastTail.Center;
-            }
-            this.View.AddSubview(tail);
+            UIView newTail = new UIView(new RectangleF(0, 0, TAIL_SIZE, TAIL_SIZE));
+            newTail.BackgroundColor = SnakeAppearance.Color("f2edc6");
+            newTail.Layer.BorderColor = SnakeAppearance.Color("797272").CGColor;
+            newTail.Layer.BorderWidth = 1.0f;
+
+            PointF newOffset = NewHeadOffset();
+            UIView oldTail = tailList[tailList.Count - 1];
+            newTail.Center = new PointF(oldTail.Center.X - newOffset.X, oldTail.Center.Y - newOffset.Y);
+            this.View.AddSubview(newTail);
 
             // Add to the list
-            tailList.Add(tail);
+            tailList.Add(newTail);
+
+            // Update count label
+            controllerView.UpdateTailCount(tailList.Count - 1);
+        }
+
+        private PointF NewHeadOffset()
+        {
+            Int32 x_offset = 0;
+            Int32 y_offset = 0;
+
+            if (direction == DIRECTION.Up)
+            {
+                x_offset = 0;
+                y_offset = -TAIL_SIZE;
+            }
+            else if (direction == DIRECTION.Down)
+            {
+                x_offset = 0;
+                y_offset = TAIL_SIZE;
+            }
+            else if (direction == DIRECTION.Left)
+            {
+                x_offset = -TAIL_SIZE;
+                y_offset = 0;
+            }
+            else if (direction == DIRECTION.Right)
+            {
+                x_offset = TAIL_SIZE;
+                y_offset = 0;
+            }
+
+            return new PointF(x_offset, y_offset);
         }
 
         private void UpdatePlayClock()
@@ -336,26 +416,24 @@ namespace Snake
             TimeSpan span = TimeSpan.FromSeconds(clock);
             if (span.Hours > 0)
             {
-                playClockLabel.Text = span.Hours.ToString("00:") + span.Minutes.ToString("00:") + span.Seconds.ToString("00");
+                controllerView.UpdatePlayClock(span.Hours.ToString("00:") + span.Minutes.ToString("00:") + span.Seconds.ToString("00"));
             }
             else if (span.Minutes > 0)
             {
-                playClockLabel.Text = "00:" + span.Minutes.ToString("00:") + span.Seconds.ToString("00");
+                controllerView.UpdatePlayClock("00:" + span.Minutes.ToString("00:") + span.Seconds.ToString("00"));
             }
             else
             {
-                playClockLabel.Text = "00:00:" + span.Seconds.ToString("00");
+                controllerView.UpdatePlayClock("00:00:" + span.Seconds.ToString("00"));
             }
-
-            playClockLabel.SetNeedsDisplay();
         }
 
         void HandleStartTouchUpInside(object sender, EventArgs e)
         {
-            if (!startButton.Hidden)
-            {
-                startButton.Hidden = true;
-            }
+            border.Layer.BorderColor = UIColor.White.CGColor;
+            border.Layer.BorderWidth = 1f;
+
+            startButton.Hidden = true;
 
             controllerView.UserInteractionEnabled = true;
 
