@@ -23,8 +23,7 @@ namespace Snake
         private DIRECTION direction;
 
         private static Int32 TAIL_SIZE = 20;
-        private static Int32 GAME_SPEED = 150;
-        // Lower the faster
+        private static Int32 GAME_SPEED = 150; // Lower the faster
 
         public enum DIRECTION
         {
@@ -345,15 +344,14 @@ namespace Snake
 
         private PointF GenerateNewPoint(UIView view)
         {
-            // New point must be divisible by TAIL_SIZE since the target has to be intersect with th snake at exact point
-            Int32 x = rand.Next(1, (Int32)(controllerView.Frame.Width / TAIL_SIZE) - 2);
-            Int32 y = rand.Next(1, (Int32)((controllerView.Frame.Y - 20) / TAIL_SIZE - 2));
-
-            // Set 12
+            // New point must be divisible by TAIL_SIZE since the target has to be intersect with the snake at exact point
+            Int32 x = rand.Next(1, (Int32)(controllerView.Frame.Width / TAIL_SIZE));
+            Int32 y = rand.Next(1, (Int32)(controllerView.Frame.Y - 20) / TAIL_SIZE);
             PointF randomPoint = new PointF(12 + x * TAIL_SIZE, y * TAIL_SIZE);
 
-            RectangleF tempHeadFrame = new RectangleF(randomPoint.X, randomPoint.Y, view.Frame.Width, view.Frame.Height);
-            if (tempHeadFrame.IntersectsWith(startButton.Frame) || OutOfBound(tempHeadFrame))
+            // If the tempFrame is out of bound or behind the startButton, generate it again
+            RectangleF tempFrame = new RectangleF(randomPoint.X, randomPoint.Y, view.Frame.Width, view.Frame.Height);
+            if (tempFrame.IntersectsWith(startButton.Frame) || OutOfBound(tempFrame))
             {
                 return GenerateNewPoint(view);
             }
@@ -363,6 +361,7 @@ namespace Snake
 
         private void AddTail()
         {
+            // newTail
             UIView newTail = new UIView(new RectangleF(0, 0, TAIL_SIZE, TAIL_SIZE));
             newTail.BackgroundColor = SnakeAppearance.Color("f2edc6");
             newTail.Layer.BorderColor = SnakeAppearance.Color("797272").CGColor;
@@ -411,20 +410,23 @@ namespace Snake
 
         private void UpdatePlayClock()
         {
-            clock++;
+            if (controllerView != null)
+            {
+                clock++;
 
-            TimeSpan span = TimeSpan.FromSeconds(clock);
-            if (span.Hours > 0)
-            {
-                controllerView.UpdatePlayClock(span.Hours.ToString("00:") + span.Minutes.ToString("00:") + span.Seconds.ToString("00"));
-            }
-            else if (span.Minutes > 0)
-            {
-                controllerView.UpdatePlayClock("00:" + span.Minutes.ToString("00:") + span.Seconds.ToString("00"));
-            }
-            else
-            {
-                controllerView.UpdatePlayClock("00:00:" + span.Seconds.ToString("00"));
+                TimeSpan span = TimeSpan.FromSeconds(clock);
+                if (span.Hours > 0)
+                {
+                    controllerView.UpdatePlayClock(span.Hours.ToString("00:") + span.Minutes.ToString("00:") + span.Seconds.ToString("00"));
+                }
+                else if (span.Minutes > 0)
+                {
+                    controllerView.UpdatePlayClock("00:" + span.Minutes.ToString("00:") + span.Seconds.ToString("00"));
+                }
+                else
+                {
+                    controllerView.UpdatePlayClock("00:00:" + span.Seconds.ToString("00"));
+                }
             }
         }
 
